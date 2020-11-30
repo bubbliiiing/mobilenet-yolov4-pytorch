@@ -16,7 +16,7 @@
 | :-----: | :-----: | :------: | :------: | :------: | :-----: |
 | VOC07+12 | [yolov4_mobilenet_v1_map76.62.pth](https://github.com/bubbliiiing/mobilenet-yolov4-lite-pytorch/releases/download/v1.0/yolov4_mobilenet_v1_map76.62.pth) | VOC-Test07 | 416x416 | - | 76.62
 | VOC07+12 | [yolov4_mobilenet_v2_map76.62.pth](https://github.com/bubbliiiing/mobilenet-yolov4-lite-pytorch/releases/download/v1.0/yolov4_mobilenet_v2_map76.93.pth) | VOC-Test07 | 416x416 | - | 76.93
-| VOC07+12 | [yolov4_mobilenet_v2_map75.30.pth](https://github.com/bubbliiiing/mobilenet-yolov4-lite-pytorch/releases/download/v1.0/yolov4_mobilenet_v3_map75.30.pth) | VOC-Test07 | 416x416 | - | 75.30
+| VOC07+12 | [yolov4_mobilenet_v3_map75.30.pth](https://github.com/bubbliiiing/mobilenet-yolov4-lite-pytorch/releases/download/v1.0/yolov4_mobilenet_v3_map75.30.pth) | VOC-Test07 | 416x416 | - | 75.30
 
 ### 所需环境
 torch==1.2.0
