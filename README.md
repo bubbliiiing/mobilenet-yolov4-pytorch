@@ -14,8 +14,9 @@
 ### 性能情况
 | 训练数据集 | 权值文件名称 | 测试数据集 | 输入图片大小 | mAP 0.5:0.95 | mAP 0.5 |
 | :-----: | :-----: | :------: | :------: | :------: | :-----: |
-| VOC07+12+COCO | [yolo4_voc_weights.pth](https://github.com/bubbliiiing/yolov4-pytorch/releases/download/v1.0/yolo4_voc_weights.pth) | VOC-Test07 | 416x416 | - | 84.5 
-| COCO-Train2017 | [yolo4_weights.pth](https://github.com/bubbliiiing/yolov4-pytorch/releases/download/v1.0/yolo4_weights.pth) | COCO-Val2017 | 416x416 | 42.8 | 66.0 
+| VOC07+12 | [yolov4_mobilenet_v1_map76.62.pth](https://github.com/bubbliiiing/mobilenet-yolov4-lite-pytorch/releases/download/v1.0/yolov4_mobilenet_v1_map76.62.pth) | VOC-Test07 | 416x416 | - | 76.62
+| VOC07+12 | [yolov4_mobilenet_v2_map76.62.pth](https://github.com/bubbliiiing/mobilenet-yolov4-lite-pytorch/releases/download/v1.0/yolov4_mobilenet_v2_map76.93.pth) | VOC-Test07 | 416x416 | - | 76.93
+| VOC07+12 | [yolov4_mobilenet_v2_map75.30.pth](https://github.com/bubbliiiing/mobilenet-yolov4-lite-pytorch/releases/download/v1.0/yolov4_mobilenet_v3_map75.30.pth) | VOC-Test07 | 416x416 | - | 75.30
 
 ### 所需环境
 torch==1.2.0
@@ -31,7 +32,7 @@ torch==1.2.0
 
 ### 文件下载
 训练所需的各个权值可在百度网盘中下载。    
-链接: https://pan.baidu.com/s/1LE3lBCoIeT2E7DY5tGtvKQ   
+链接: https://pan.baidu.com/s/1LE3lBCoIeT2E7DY5tGtvKQ 提取码: fxsh  
 三个已经训练好的权重均为VOC数据集的权重。  
   
 ### 预测步骤
