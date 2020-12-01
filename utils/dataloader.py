@@ -208,8 +208,6 @@ class YoloDataset(Dataset):
             return new_image, []
 
     def __getitem__(self, index):
-        if index == 0:
-            shuffle(self.train_lines)
         lines = self.train_lines
         n = self.train_batches
         index = index % n
