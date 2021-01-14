@@ -1,23 +1,20 @@
-import math
 from random import shuffle
-
-import cv2
 import numpy as np
 import torch
 import torch.nn as nn
+import math
 import torch.nn.functional as F
-from matplotlib.colors import hsv_to_rgb, rgb_to_hsv
-from nets.yolo_training import Generator
 from PIL import Image
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
 from torch.utils.data.dataset import Dataset
-
 from utils.utils import bbox_iou, merge_bboxes
-
+from matplotlib.colors import rgb_to_hsv, hsv_to_rgb
+from nets.yolo_training import Generator
+import cv2
 
 class YoloDataset(Dataset):
-    def __init__(self, train_lines, image_size, mosaic=True):
+    def __init__(self, train_lines, image_size, mosaic=True, is_train=True):
         super(YoloDataset, self).__init__()
 
         self.train_lines = train_lines
@@ -25,6 +22,7 @@ class YoloDataset(Dataset):
         self.image_size = image_size
         self.mosaic = mosaic
         self.flag = True
+        self.is_train = is_train
 
     def __len__(self):
         return self.train_batches
@@ -32,13 +30,42 @@ class YoloDataset(Dataset):
     def rand(self, a=0, b=1):
         return np.random.rand() * (b - a) + a
 
-    def get_random_data(self, annotation_line, input_shape, jitter=.3, hue=.1, sat=1.5, val=1.5):
+    def get_random_data(self, annotation_line, input_shape, jitter=.3, hue=.1, sat=1.5, val=1.5, random=True):
         """实时数据增强的随机预处理"""
         line = annotation_line.split()
         image = Image.open(line[0])
         iw, ih = image.size
         h, w = input_shape
         box = np.array([np.array(list(map(int, box.split(',')))) for box in line[1:]])
+
+        if not random:
+            scale = min(w/iw, h/ih)
+            nw = int(iw*scale)
+            nh = int(ih*scale)
+            dx = (w-nw)//2
+            dy = (h-nh)//2
+
+            image = image.resize((nw,nh), Image.BICUBIC)
+            new_image = Image.new('RGB', (w,h), (128,128,128))
+            new_image.paste(image, (dx, dy))
+            image_data = np.array(new_image, np.float32)
+
+            # 调整目标框坐标
+            box_data = np.zeros((len(box), 5))
+            if len(box) > 0:
+                np.random.shuffle(box)
+                box[:, [0, 2]] = box[:, [0, 2]] * nw / iw + dx
+                box[:, [1, 3]] = box[:, [1, 3]] * nh / ih + dy
+                box[:, 0:2][box[:, 0:2] < 0] = 0
+                box[:, 2][box[:, 2] > w] = w
+                box[:, 3][box[:, 3] > h] = h
+                box_w = box[:, 2] - box[:, 0]
+                box_h = box[:, 3] - box[:, 1]
+                box = box[np.logical_and(box_w > 1, box_h > 1)]  # 保留有效框
+                box_data = np.zeros((len(box), 5))
+                box_data[:len(box)] = box
+
+            return image_data, box_data
 
         # 调整图片大小
         new_ar = w / h * self.rand(1 - jitter, 1 + jitter) / self.rand(1 - jitter, 1 + jitter)
@@ -55,7 +82,7 @@ class YoloDataset(Dataset):
         dx = int(self.rand(0, w - nw))
         dy = int(self.rand(0, h - nh))
         new_image = Image.new('RGB', (w, h),
-                              (128,128,128))
+                              (np.random.randint(0, 255), np.random.randint(0, 255), np.random.randint(0, 255)))
         new_image.paste(image, (dx, dy))
         image = new_image
 
@@ -95,13 +122,8 @@ class YoloDataset(Dataset):
             box = box[np.logical_and(box_w > 1, box_h > 1)]  # 保留有效框
             box_data = np.zeros((len(box), 5))
             box_data[:len(box)] = box
-        if len(box) == 0:
-            return image_data, []
 
-        if (box_data[:, :4] > 0).any():
-            return image_data, box_data
-        else:
-            return image_data, []
+        return image_data, box_data
 
     def get_random_data_with_Mosaic(self, annotation_line, input_shape, hue=.1, sat=1.5, val=1.5):
         h, w = input_shape
@@ -115,7 +137,7 @@ class YoloDataset(Dataset):
         index = 0
 
         place_x = [0, 0, int(w * min_offset_x), int(w * min_offset_x)]
-        place_y = [0, int(h * min_offset_y), int(w * min_offset_y), 0]
+        place_y = [0, int(h * min_offset_y), int(h * min_offset_y), 0]
         for line in annotation_line:
             # 每一行进行分割
             line_content = line.split()
@@ -200,12 +222,7 @@ class YoloDataset(Dataset):
         # 对框进行进一步的处理
         new_boxes = np.array(merge_bboxes(box_datas, cutx, cuty))
 
-        if len(new_boxes) == 0:
-            return new_image, []
-        if (new_boxes[:, :4] > 0).any():
-            return new_image, new_boxes
-        else:
-            return new_image, []
+        return new_image, new_boxes
 
     def __getitem__(self, index):
         lines = self.train_lines
@@ -215,10 +232,10 @@ class YoloDataset(Dataset):
             if self.flag and (index + 4) < n:
                 img, y = self.get_random_data_with_Mosaic(lines[index:index + 4], self.image_size[0:2])
             else:
-                img, y = self.get_random_data(lines[index], self.image_size[0:2])
+                img, y = self.get_random_data(lines[index], self.image_size[0:2], random=self.is_train)
             self.flag = bool(1-self.flag)
         else:
-            img, y = self.get_random_data(lines[index], self.image_size[0:2])
+            img, y = self.get_random_data(lines[index], self.image_size[0:2], random=self.is_train)
 
         if len(y) != 0:
             # 从坐标转换成0~1的百分比
@@ -235,7 +252,6 @@ class YoloDataset(Dataset):
             boxes[:, 0] = boxes[:, 0] + boxes[:, 2] / 2
             boxes[:, 1] = boxes[:, 1] + boxes[:, 3] / 2
             y = np.concatenate([boxes, y[:, -1:]], axis=-1)
-
         img = np.array(img, dtype=np.float32)
 
         tmp_inp = np.transpose(img / 255.0, (2, 0, 1))

@@ -127,20 +127,32 @@ def yolo_head(filters_list, in_filters):
     )
     return m
 
+    
 #---------------------------------------------------#
 #   yolo_body
 #---------------------------------------------------#
 class YoloBody(nn.Module):
     def __init__(self, num_anchors, num_classes, backbone="mobilenetv2", pretrained=False):
         super(YoloBody, self).__init__()
-        #  backbone
+        #---------------------------------------------------#   
+        #   生成mobilnet的主干模型，获得三个有效特征层。
+        #---------------------------------------------------#
         if backbone == "mobilenetv1":
+            #---------------------------------------------------#   
+            #   52,52,256；26,26,512；13,13,1024
+            #---------------------------------------------------#
             self.backbone = MobileNetV1(pretrained=pretrained)
             in_filters = [256,512,1024]
         elif backbone == "mobilenetv2":
+            #---------------------------------------------------#   
+            #   52,52,32；26,26,92；13,13,320
+            #---------------------------------------------------#
             self.backbone = MobileNetV2(pretrained=pretrained)
             in_filters = [32,96,320]
         elif backbone == "mobilenetv3":
+            #---------------------------------------------------#   
+            #   52,52,40；26,26,112；13,13,160
+            #---------------------------------------------------#
             self.backbone = MobileNetV3(pretrained=pretrained)
             in_filters = [40,112,160]
         else:
@@ -157,21 +169,22 @@ class YoloBody(nn.Module):
         self.upsample2       = Upsample(256, 128)
         self.conv_for_P3     = conv2d(in_filters[0], 128,1)
         self.make_five_conv2 = make_five_conv([128, 256], 256)
-        # 3*(5+num_classes)=3*(5+20)=3*(4+1+20)=75
-        # 4+1+num_classes
+
+        # 3*(5+num_classes) = 3*(5+20) = 3*(4+1+20)=75
         final_out_filter2    = num_anchors * (5 + num_classes)
         self.yolo_head3      = yolo_head([256, final_out_filter2],128)
 
         self.down_sample1    = conv_dw(128, 256,stride=2)
         self.make_five_conv3 = make_five_conv([256, 512],512)
-        # 3*(5+num_classes)=3*(5+20)=3*(4+1+20)=75
+
+        # 3*(5+num_classes) = 3*(5+20) = 3*(4+1+20)=75
         final_out_filter1    = num_anchors * (5 + num_classes)
         self.yolo_head2      = yolo_head([512, final_out_filter1], 256)
 
-
         self.down_sample2    = conv_dw(256, 512,stride=2)
         self.make_five_conv4 = make_five_conv([512, 1024], 1024)
-        # 3*(5+num_classes)=3*(5+20)=3*(4+1+20)=75
+
+        # 3*(5+num_classes) = 3*(5+20) = 3*(4+1+20)=75
         final_out_filter0    = num_anchors * (5 + num_classes)
         self.yolo_head1      = yolo_head([1024, final_out_filter0], 512)
 
