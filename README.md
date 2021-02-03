@@ -14,9 +14,9 @@
 ### 性能情况
 | 训练数据集 | 权值文件名称 | 测试数据集 | 输入图片大小 | mAP 0.5:0.95 | mAP 0.5 |
 | :-----: | :-----: | :------: | :------: | :------: | :-----: |
-| VOC07+12 | [yolov4_mobilenet_v1_map76.62.pth](https://github.com/bubbliiiing/mobilenet-yolov4-lite-pytorch/releases/download/v1.0/yolov4_mobilenet_v1_map76.62.pth) | VOC-Test07 | 416x416 | - | 78.67
-| VOC07+12 | [yolov4_mobilenet_v2_map76.93.pth](https://github.com/bubbliiiing/mobilenet-yolov4-lite-pytorch/releases/download/v1.0/yolov4_mobilenet_v2_map76.93.pth) | VOC-Test07 | 416x416 | - | 78.81
-| VOC07+12 | [yolov4_mobilenet_v3_map75.30.pth](https://github.com/bubbliiiing/mobilenet-yolov4-lite-pytorch/releases/download/v1.0/yolov4_mobilenet_v3_map75.30.pth) | VOC-Test07 | 416x416 | - | 77.50
+| VOC07+12 | [yolov4_mobilenet_v1_voc.pth](https://github.com/bubbliiiing/mobilenet-yolov4-lite-pytorch/releases/download/v1.0/yolov4_mobilenet_v1_voc.pth) | VOC-Test07 | 416x416 | - | 78.67
+| VOC07+12 | [yolov4_mobilenet_v2_voc.pth](https://github.com/bubbliiiing/mobilenet-yolov4-lite-pytorch/releases/download/v1.0/yolov4_mobilenet_v2_voc.pth) | VOC-Test07 | 416x416 | - | 78.81
+| VOC07+12 | [yolov4_mobilenet_v3_voc.pth](https://github.com/bubbliiiing/mobilenet-yolov4-lite-pytorch/releases/download/v1.0/yolov4_mobilenet_v3_voc.pth) | VOC-Test07 | 416x416 | - | 77.50
 
 ### 所需环境
 torch==1.2.0
