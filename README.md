@@ -22,19 +22,19 @@
 torch==1.2.0
 
 ### 注意事项
-提供的三个权重分别是基于mobilenetv1、mobilenetv2、mobilenetv3主干网络训练而成的。使用的时候注意backbone和权重的对应。 
-训练前注意修改model_path和backbone使得二者对应。
-预测前注意修改model_path和backbone使得二者对应。
+提供的三个权重分别是基于mobilenetv1、mobilenetv2、mobilenetv3主干网络训练而成的。使用的时候注意backbone和权重的对应。   
+训练前注意修改model_path和backbone使得二者对应。   
+预测前注意修改model_path和backbone使得二者对应。   
 
 ### 小技巧的设置
 在train.py文件下：   
 1、mosaic参数可用于控制是否实现Mosaic数据增强。    
 2、Cosine_scheduler可用于控制是否使用学习率余弦退火衰减。    
-3、label_smoothing可用于控制是否Label Smoothing平滑。  
+3、label_smoothing可用于控制是否Label Smoothing平滑。   
 
-### 文件下载
+### 文件下载 
 训练所需的各个权值可在百度网盘中下载。    
-链接: https://pan.baidu.com/s/1mX5UPqPwGz-A1son3vWxqw 提取码: 1kut    
+链接: https://pan.baidu.com/s/1mX5UPqPwGz-A1son3vWxqw 提取码: 1kut     
 三个已经训练好的权重均为VOC数据集的权重。  
   
 ### 预测步骤
