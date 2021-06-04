@@ -3,18 +3,16 @@
 #-------------------------------------#
 import colorsys
 import os
+import time
 
-import cv2
 import numpy as np
 import torch
-import torch.backends.cudnn as cudnn
 import torch.nn as nn
 from PIL import Image, ImageDraw, ImageFont
-from torch.autograd import Variable
 
 from nets.yolo4 import YoloBody
-from utils.utils import (DecodeBox, bbox_iou, letterbox_image,
-                         non_max_suppression, yolo_correct_boxes)
+from utils.utils import (DecodeBox, letterbox_image, non_max_suppression,
+                         yolo_correct_boxes)
 
 
 #--------------------------------------------#
@@ -26,10 +24,10 @@ from utils.utils import (DecodeBox, bbox_iou, letterbox_image,
 #--------------------------------------------#
 class YOLO(object):
     _defaults = {
-        "model_path"        : 'model_data/yolov4_mobilenet_v1_voc.pth',
+        "model_path"        : 'model_data/yolov4_ghostnet_voc.pth',
         "anchors_path"      : 'model_data/yolo_anchors.txt',
         "classes_path"      : 'model_data/voc_classes.txt',
-        "backbone"          : 'mobilenetv1',
+        "backbone"          : 'ghostnet',
         "model_image_size"  : (416, 416, 3),
         "confidence"        : 0.5,
         "iou"               : 0.3,
@@ -95,9 +93,7 @@ class YOLO(object):
         self.net.load_state_dict(state_dict)
         print('Finished!')
         
-        
         if self.cuda:
-            os.environ["CUDA_VISIBLE_DEVICES"] = '0'
             self.net = nn.DataParallel(self.net)
             self.net = self.net.cuda()
 
@@ -122,8 +118,12 @@ class YOLO(object):
     #   检测图片
     #---------------------------------------------------#
     def detect_image(self, image):
-        image_shape = np.array(np.shape(image)[0:2])
+        #---------------------------------------------------------#
+        #   在这里将图像转换成RGB图像，防止灰度图在预测时报错。
+        #---------------------------------------------------------#
+        image = image.convert('RGB')
 
+        image_shape = np.array(np.shape(image)[0:2])
         #---------------------------------------------------------#
         #   给图像增加灰条，实现不失真的resize
         #   也可以直接resize进行识别
@@ -131,8 +131,7 @@ class YOLO(object):
         if self.letterbox_image:
             crop_img = np.array(letterbox_image(image, (self.model_image_size[1],self.model_image_size[0])))
         else:
-            crop_img = image.convert('RGB')
-            crop_img = crop_img.resize((self.model_image_size[1],self.model_image_size[0]), Image.BICUBIC)
+            crop_img = image.resize((self.model_image_size[1],self.model_image_size[0]), Image.BICUBIC)
         photo = np.array(crop_img,dtype = np.float32) / 255.0
         photo = np.transpose(photo, (2, 0, 1))
         #---------------------------------------------------------#
@@ -233,4 +232,90 @@ class YOLO(object):
             draw.text(text_origin, str(label,'UTF-8'), fill=(0, 0, 0), font=font)
             del draw
         return image
+
+
+    def get_FPS(self, image, test_interval):
+        image_shape = np.array(np.shape(image)[0:2])
+        #---------------------------------------------------------#
+        #   给图像增加灰条，实现不失真的resize
+        #   也可以直接resize进行识别
+        #---------------------------------------------------------#
+        if self.letterbox_image:
+            crop_img = np.array(letterbox_image(image, (self.model_image_size[1],self.model_image_size[0])))
+        else:
+            crop_img = image.convert('RGB')
+            crop_img = crop_img.resize((self.model_image_size[1],self.model_image_size[0]), Image.BICUBIC)
+        photo = np.array(crop_img,dtype = np.float32) / 255.0
+        photo = np.transpose(photo, (2, 0, 1))
+        #---------------------------------------------------------#
+        #   添加上batch_size维度
+        #---------------------------------------------------------#
+        images = [photo]
+
+        with torch.no_grad():
+            images = torch.from_numpy(np.asarray(images))
+            if self.cuda:
+                images = images.cuda()
+            outputs = self.net(images)
+            output_list = []
+            for i in range(3):
+                output_list.append(self.yolo_decodes[i](outputs[i]))
+            output = torch.cat(output_list, 1)
+            batch_detections = non_max_suppression(output, len(self.class_names),
+                                                    conf_thres=self.confidence,
+                                                    nms_thres=self.iou)
+            try:
+                batch_detections = batch_detections[0].cpu().numpy()
+                top_index = batch_detections[:,4]*batch_detections[:,5] > self.confidence
+                top_conf = batch_detections[top_index,4]*batch_detections[top_index,5]
+                top_label = np.array(batch_detections[top_index,-1],np.int32)
+                top_bboxes = np.array(batch_detections[top_index,:4])
+                top_xmin, top_ymin, top_xmax, top_ymax = np.expand_dims(top_bboxes[:,0],-1),np.expand_dims(top_bboxes[:,1],-1),np.expand_dims(top_bboxes[:,2],-1),np.expand_dims(top_bboxes[:,3],-1)
+                
+                if self.letterbox_image:
+                    boxes = yolo_correct_boxes(top_ymin,top_xmin,top_ymax,top_xmax,np.array([self.model_image_size[0],self.model_image_size[1]]),image_shape)
+                else:
+                    top_xmin = top_xmin / self.model_image_size[1] * image_shape[1]
+                    top_ymin = top_ymin / self.model_image_size[0] * image_shape[0]
+                    top_xmax = top_xmax / self.model_image_size[1] * image_shape[1]
+                    top_ymax = top_ymax / self.model_image_size[0] * image_shape[0]
+                    boxes = np.concatenate([top_ymin,top_xmin,top_ymax,top_xmax], axis=-1)
+            
+            except:
+                pass
+                
+        t1 = time.time()
+        for _ in range(test_interval):
+            with torch.no_grad():
+                outputs = self.net(images)
+                output_list = []
+                for i in range(3):
+                    output_list.append(self.yolo_decodes[i](outputs[i]))
+                output = torch.cat(output_list, 1)
+                batch_detections = non_max_suppression(output, len(self.class_names),
+                                                        conf_thres=self.confidence,
+                                                        nms_thres=self.iou)
+                try:
+                    batch_detections = batch_detections[0].cpu().numpy()
+                    top_index = batch_detections[:,4]*batch_detections[:,5] > self.confidence
+                    top_conf = batch_detections[top_index,4]*batch_detections[top_index,5]
+                    top_label = np.array(batch_detections[top_index,-1],np.int32)
+                    top_bboxes = np.array(batch_detections[top_index,:4])
+                    top_xmin, top_ymin, top_xmax, top_ymax = np.expand_dims(top_bboxes[:,0],-1),np.expand_dims(top_bboxes[:,1],-1),np.expand_dims(top_bboxes[:,2],-1),np.expand_dims(top_bboxes[:,3],-1)
+                   
+                    if self.letterbox_image:
+                        boxes = yolo_correct_boxes(top_ymin,top_xmin,top_ymax,top_xmax,np.array([self.model_image_size[0],self.model_image_size[1]]),image_shape)
+                    else:
+                        top_xmin = top_xmin / self.model_image_size[1] * image_shape[1]
+                        top_ymin = top_ymin / self.model_image_size[0] * image_shape[0]
+                        top_xmax = top_xmax / self.model_image_size[1] * image_shape[1]
+                        top_ymax = top_ymax / self.model_image_size[0] * image_shape[0]
+                        boxes = np.concatenate([top_ymin,top_xmin,top_ymax,top_xmax], axis=-1)
+                
+                except:
+                    pass
+
+        t2 = time.time()
+        tact_time = (t2 - t1) / test_interval
+        return tact_time
 

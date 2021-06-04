@@ -6,7 +6,7 @@ import torch.nn as nn
 from nets.mobilenet_v1 import mobilenet_v1
 from nets.mobilenet_v2 import mobilenet_v2
 from nets.mobilenet_v3 import mobilenet_v3
-
+from nets.ghostnet import ghostnet
 
 class MobileNetV1(nn.Module):
     def __init__(self, pretrained = False):
@@ -40,6 +40,33 @@ class MobileNetV3(nn.Module):
         out4 = self.model.features[7:13](out3)
         out5 = self.model.features[13:16](out4)
         return out3, out4, out5
+
+class GhostNet(nn.Module):
+    def __init__(self, pretrained=True):
+        super(GhostNet, self).__init__()
+        model = ghostnet()
+        if pretrained:
+            state_dict = torch.load("model_data/ghostnet_weights.h5")
+            model.load_state_dict(state_dict)
+        del model.global_pool
+        del model.conv_head
+        del model.act2
+        del model.classifier
+        del model.blocks[9]
+        self.model = model
+        self.layers_out_filters = [16, 24, 40, 112, 160]
+
+    def forward(self, x):
+        x = self.model.conv_stem(x)
+        x = self.model.bn1(x)
+        x = self.model.act1(x)
+        feature_maps = []
+
+        for idx, block in enumerate(self.model.blocks):
+            x = block(x)
+            if idx in [2,4,6,8]:
+                feature_maps.append(x)
+        return feature_maps[1:]
 
 def conv2d(filter_in, filter_out, kernel_size, groups=1, stride=1):
     pad = (kernel_size - 1) // 2 if kernel_size else 0
@@ -141,22 +168,28 @@ class YoloBody(nn.Module):
             #---------------------------------------------------#   
             #   52,52,256；26,26,512；13,13,1024
             #---------------------------------------------------#
-            self.backbone = MobileNetV1(pretrained=pretrained)
-            in_filters = [256,512,1024]
+            self.backbone   = MobileNetV1(pretrained=pretrained)
+            in_filters      = [256,512,1024]
         elif backbone == "mobilenetv2":
             #---------------------------------------------------#   
             #   52,52,32；26,26,92；13,13,320
             #---------------------------------------------------#
-            self.backbone = MobileNetV2(pretrained=pretrained)
-            in_filters = [32,96,320]
+            self.backbone   = MobileNetV2(pretrained=pretrained)
+            in_filters      = [32,96,320]
         elif backbone == "mobilenetv3":
             #---------------------------------------------------#   
             #   52,52,40；26,26,112；13,13,160
             #---------------------------------------------------#
-            self.backbone = MobileNetV3(pretrained=pretrained)
-            in_filters = [40,112,160]
+            self.backbone   = MobileNetV3(pretrained=pretrained)
+            in_filters      = [40,112,160]
+        elif backbone == "ghostnet":
+            #---------------------------------------------------#   
+            #   52,52,40；26,26,112；13,13,160
+            #---------------------------------------------------#
+            self.backbone   = GhostNet(pretrained=pretrained)
+            in_filters      = [40,112,160]
         else:
-            raise ValueError('Unsupported backbone - `{}`, Use mobilenetv1, mobilenetv2, mobilenetv3.'.format(backbone))
+            raise ValueError('Unsupported backbone - `{}`, Use mobilenetv1, mobilenetv2, mobilenetv3, ghostnet.'.format(backbone))
 
         self.conv1           = make_three_conv([512, 1024], in_filters[2])
         self.SPP             = SpatialPyramidPooling()
