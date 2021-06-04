@@ -129,6 +129,7 @@ if __name__ == "__main__":
     #   mobilenetv1
     #   mobilenetv2
     #   mobilenetv3
+    #   ghostnet
     #-------------------------------#
     backbone = "mobilenetv1"
     #-------------------------------#
