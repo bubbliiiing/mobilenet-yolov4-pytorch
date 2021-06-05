@@ -42,7 +42,7 @@ torch==1.2.0
 
 ## 文件下载 
 训练所需的各个权值可在百度网盘中下载。    
-链接: https://pan.baidu.com/s/1mX5UPqPwGz-A1son3vWxqw 提取码: 1kut     
+链接: https://pan.baidu.com/s/1mBgl6xaUpvIieH54JSD5_g 提取码: bii7    
 三个已经训练好的权重均为VOC数据集的权重。  
   
 VOC数据集下载地址如下：  
