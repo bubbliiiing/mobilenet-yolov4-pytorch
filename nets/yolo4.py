@@ -46,7 +46,7 @@ class GhostNet(nn.Module):
         super(GhostNet, self).__init__()
         model = ghostnet()
         if pretrained:
-            state_dict = torch.load("model_data/ghostnet_weights.h5")
+            state_dict = torch.load("model_data/ghostnet_weights.pth")
             model.load_state_dict(state_dict)
         del model.global_pool
         del model.conv_head
