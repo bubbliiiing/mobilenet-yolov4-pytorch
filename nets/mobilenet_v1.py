@@ -75,7 +75,7 @@ class MobileNetV1(nn.Module):
 def mobilenet_v1(pretrained=False, progress=True):
     model = MobileNetV1()
     if pretrained:
-        print("mobilenet_v1 has no pretrained model")
+        raise ValueError("mobilenet_v1 has no pretrained model")
     return model
 
 if __name__ == "__main__":
