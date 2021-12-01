@@ -25,6 +25,7 @@
 | VOC07+12 | [yolov4_mobilenet_v2_voc.pth](https://github.com/bubbliiiing/mobilenet-yolov4-lite-pytorch/releases/download/v1.0/yolov4_mobilenet_v2_voc.pth) | VOC-Test07 | 416x416 | - | 80.12
 | VOC07+12 | [yolov4_mobilenet_v3_voc.pth](https://github.com/bubbliiiing/mobilenet-yolov4-lite-pytorch/releases/download/v1.0/yolov4_mobilenet_v3_voc.pth) | VOC-Test07 | 416x416 | - | 79.01
 | VOC07+12 | [yolov4_ghostnet_voc.pth](https://github.com/bubbliiiing/mobilenet-yolov4-lite-pytorch/releases/download/v1.0/yolov4_ghostnet_voc.pth) | VOC-Test07 | 416x416 | - | 78.69
+| VOC07+12 | [yolov4_densenet121_voc.pth](https://github.com/bubbliiiing/mobilenet-yolov4-lite-pytorch/releases/download/v1.0/yolov4_densenet121_voc.pth) | VOC-Test07 | 416x416 | - | 83.99
 
 ## 所需环境
 torch==1.2.0
@@ -42,14 +43,14 @@ torch==1.2.0
 
 ## 文件下载 
 训练所需的各个权值、主干的权值可在百度网盘中下载。    
-链接: https://pan.baidu.com/s/1mBgl6xaUpvIieH54JSD5_g 提取码: bii7    
-三个已经训练好的权重均为VOC数据集的权重。  
+链接: https://pan.baidu.com/s/1K4I6cSDUXJxT1oycqfeqWA    
+提取码: q3mc   
   
 VOC数据集下载地址如下，里面已经包括了训练集、测试集、验证集（与测试集一样），无需再次划分：  
-链接: https://pan.baidu.com/s/1YuBbBKxm2FGgTU5OfaeC5A    
-提取码: uack   
+链接: https://pan.baidu.com/s/19Mw2u_df_nBzsC2lg20fQA  
+提取码: j5ge  
 
-## 训练步骤
+## 训练步骤  
 ### a、训练VOC07+12数据集
 1. 数据集的准备   
 **本文使用VOC格式进行训练，训练前需要下载好VOC07+12的数据集，解压后放在根目录**  
