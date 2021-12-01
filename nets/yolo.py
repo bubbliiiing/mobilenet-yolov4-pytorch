@@ -2,11 +2,14 @@ from collections import OrderedDict
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
+from nets.densenet import _Transition, densenet121, densenet169, densenet201
+from nets.ghostnet import ghostnet
 from nets.mobilenet_v1 import mobilenet_v1
 from nets.mobilenet_v2 import mobilenet_v2
 from nets.mobilenet_v3 import mobilenet_v3
-from nets.ghostnet import ghostnet
+
 
 class MobileNetV1(nn.Module):
     def __init__(self, pretrained = False):
@@ -54,7 +57,6 @@ class GhostNet(nn.Module):
         del model.classifier
         del model.blocks[9]
         self.model = model
-        self.layers_out_filters = [16, 24, 40, 112, 160]
 
     def forward(self, x):
         x = self.model.conv_stem(x)
@@ -66,6 +68,32 @@ class GhostNet(nn.Module):
             x = block(x)
             if idx in [2,4,6,8]:
                 feature_maps.append(x)
+        return feature_maps[1:]
+
+class Densenet(nn.Module):
+    def __init__(self, backbone, pretrained=False):
+        super(Densenet, self).__init__()
+        densenet = {
+            "densenet121" : densenet121, 
+            "densenet169" : densenet169, 
+            "densenet201" : densenet201
+        }[backbone]
+        model = densenet(pretrained)
+        del model.classifier
+        self.model = model
+
+    def forward(self, x):
+        feature_maps = []
+        for block in self.model.features:
+            if type(block)==_Transition:
+                for _, subblock in enumerate(block):
+                    x = subblock(x)
+                    if type(subblock)==nn.Conv2d:
+                        feature_maps.append(x)
+            else:
+                x = block(x)
+        x = F.relu(x, inplace=True)
+        feature_maps.append(x)
         return feature_maps[1:]
 
 def conv2d(filter_in, filter_out, kernel_size, groups=1, stride=1):
@@ -169,28 +197,37 @@ class YoloBody(nn.Module):
             #   52,52,256；26,26,512；13,13,1024
             #---------------------------------------------------#
             self.backbone   = MobileNetV1(pretrained=pretrained)
-            in_filters      = [256,512,1024]
+            in_filters      = [256, 512, 1024]
         elif backbone == "mobilenetv2":
             #---------------------------------------------------#   
             #   52,52,32；26,26,92；13,13,320
             #---------------------------------------------------#
             self.backbone   = MobileNetV2(pretrained=pretrained)
-            in_filters      = [32,96,320]
+            in_filters      = [32, 96, 320]
         elif backbone == "mobilenetv3":
             #---------------------------------------------------#   
             #   52,52,40；26,26,112；13,13,160
             #---------------------------------------------------#
             self.backbone   = MobileNetV3(pretrained=pretrained)
-            in_filters      = [40,112,160]
+            in_filters      = [40, 112, 160]
         elif backbone == "ghostnet":
             #---------------------------------------------------#   
             #   52,52,40；26,26,112；13,13,160
             #---------------------------------------------------#
             self.backbone   = GhostNet(pretrained=pretrained)
-            in_filters      = [40,112,160]
+            in_filters      = [40, 112, 160]
+        elif backbone in ["densenet121", "densenet169", "densenet201"]:
+            #---------------------------------------------------#   
+            #   52,52,256；26,26,512；13,13,1024
+            #---------------------------------------------------#
+            self.backbone   = Densenet(backbone, pretrained=pretrained)
+            in_filters = {
+                "densenet121" : [256, 512, 1024], 
+                "densenet169" : [256, 640, 1664], 
+                "densenet201" : [256, 896, 1920]
+            }[backbone]
         else:
-            raise ValueError('Unsupported backbone - `{}`, Use mobilenetv1, mobilenetv2, mobilenetv3, ghostnet.'.format(backbone))
-
+            ValueError('Unsupported backbone - `{}`, Use mobilenetv1, mobilenetv2, mobilenetv3, ghostnet, densenet121, densenet169, densenet201.'.format(backbone))
 
         self.conv1           = make_three_conv([512, 1024], in_filters[2])
         self.SPP             = SpatialPyramidPooling()

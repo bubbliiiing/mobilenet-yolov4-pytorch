@@ -75,7 +75,8 @@ class MobileNetV1(nn.Module):
 def mobilenet_v1(pretrained=False, progress=True):
     model = MobileNetV1()
     if pretrained:
-        raise ValueError("mobilenet_v1 has no pretrained model")
+        state_dict = torch.load('./model_data/mobilenet_v1_weights.pth')
+        model.load_state_dict(state_dict, strict=True)
     return model
 
 if __name__ == "__main__":
