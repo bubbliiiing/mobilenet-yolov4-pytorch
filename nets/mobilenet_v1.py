@@ -1,11 +1,5 @@
-import time
-
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-import torchvision.models as models
-import torchvision.models._utils as _utils
-from torch.autograd import Variable
 
 
 def conv_bn(inp, oup, stride = 1):
