@@ -143,7 +143,7 @@ if __name__ == "__main__":
     #   Freeze_batch_size   模型冻结训练的batch_size
     #                       (当Freeze_Train=False时失效)
     #------------------------------------------------------------------#
-    Init_Epoch          = 0
+    Init_Epoch          = 55
     Freeze_Epoch        = 100
     Freeze_batch_size   = 16
     #------------------------------------------------------------------#
@@ -270,9 +270,9 @@ if __name__ == "__main__":
         #-------------------------------------------------------------------#
         #   判断当前batch_size与64的差别，自适应调整学习率
         #-------------------------------------------------------------------#
-        nbs     = 64
-        Init_lr = max(batch_size / nbs * Init_lr, 1e-4)
-        Min_lr  = max(batch_size / nbs * Min_lr, 1e-6)
+        nbs         = 64
+        Init_lr_fit = max(batch_size / nbs * Init_lr, 1e-4)
+        Min_lr_fit  = max(batch_size / nbs * Min_lr, 1e-6)
 
         #---------------------------------------#
         #   根据optimizer_type选择优化器
@@ -286,8 +286,8 @@ if __name__ == "__main__":
             elif hasattr(v, "weight") and isinstance(v.weight, nn.Parameter):
                 pg1.append(v.weight)   
         optimizer = {
-            'adam'  : optim.Adam(pg0, Init_lr, betas = (momentum, 0.999)),
-            'sgd'   : optim.SGD(pg0, Init_lr, momentum = momentum, nesterov=True)
+            'adam'  : optim.Adam(pg0, Init_lr_fit, betas = (momentum, 0.999)),
+            'sgd'   : optim.SGD(pg0, Init_lr_fit, momentum = momentum, nesterov=True)
         }[optimizer_type]
         optimizer.add_param_group({"params": pg1, "weight_decay": weight_decay})
         optimizer.add_param_group({"params": pg2})
@@ -295,7 +295,7 @@ if __name__ == "__main__":
         #---------------------------------------#
         #   获得学习率下降的公式
         #---------------------------------------#
-        lr_scheduler_func = get_lr_scheduler(lr_decay_type, Init_lr, Min_lr, UnFreeze_Epoch)
+        lr_scheduler_func = get_lr_scheduler(lr_decay_type, Init_lr_fit, Min_lr_fit, UnFreeze_Epoch)
         
         #---------------------------------------#
         #   判断每一个世代的长度
@@ -326,6 +326,17 @@ if __name__ == "__main__":
             #---------------------------------------#
             if epoch >= Freeze_Epoch and not UnFreeze_flag and Freeze_Train:
                 batch_size = Unfreeze_batch_size
+
+                #-------------------------------------------------------------------#
+                #   判断当前batch_size与64的差别，自适应调整学习率
+                #-------------------------------------------------------------------#
+                nbs         = 64
+                Init_lr_fit = max(batch_size / nbs * Init_lr, 1e-4)
+                Min_lr_fit  = max(batch_size / nbs * Min_lr, 1e-6)
+                #---------------------------------------#
+                #   获得学习率下降的公式
+                #---------------------------------------#
+                lr_scheduler_func = get_lr_scheduler(lr_decay_type, Init_lr_fit, Min_lr_fit, UnFreeze_Epoch)
 
                 for param in model.backbone.parameters():
                     param.requires_grad = True
