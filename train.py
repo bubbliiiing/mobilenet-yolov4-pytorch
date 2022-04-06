@@ -200,6 +200,14 @@ if __name__ == "__main__":
     #------------------------------------------------------------------#
     lr_decay_type       = "cos"
     #------------------------------------------------------------------#
+    #   focal_loss      是否使用Focal Loss平衡正负样本
+    #   alpha           Focal Loss的正负样本平衡参数
+    #   gamma           Focal Loss的难易分类样本平衡参数
+    #------------------------------------------------------------------#
+    focal_loss          = False
+    alpha               = 0.25
+    gamma               = 2
+    #------------------------------------------------------------------#
     #   save_period     多少个epoch保存一次权值，默认每个世代都保存
     #------------------------------------------------------------------#
     save_period         = 1
@@ -245,7 +253,7 @@ if __name__ == "__main__":
         model_dict.update(pretrained_dict)
         model.load_state_dict(model_dict)
 
-    yolo_loss    = YOLOLoss(anchors, num_classes, input_shape, Cuda, anchors_mask, label_smoothing)
+    yolo_loss    = YOLOLoss(anchors, num_classes, input_shape, Cuda, anchors_mask, label_smoothing, focal_loss, alpha, gamma)
     loss_history = LossHistory(save_dir, model, input_shape=input_shape)
     
     model_train = model.train()
@@ -290,8 +298,8 @@ if __name__ == "__main__":
         #   判断当前batch_size，自适应调整学习率
         #-------------------------------------------------------------------#
         nbs             = 64
-        lr_limit_max    = 1e-3 if optimizer_type == 'adam' else 5e-2
-        lr_limit_min    = 3e-4 if optimizer_type == 'adam' else 5e-4
+        lr_limit_max    = 1e-3 if optimizer_type in ['adam', 'adamw'] else 5e-2
+        lr_limit_min    = 3e-4 if optimizer_type in ['adam', 'adamw'] else 5e-4
         Init_lr_fit     = min(max(batch_size / nbs * Init_lr, lr_limit_min), lr_limit_max)
         Min_lr_fit      = min(max(batch_size / nbs * Min_lr, lr_limit_min * 1e-2), lr_limit_max * 1e-2)
 
@@ -308,6 +316,7 @@ if __name__ == "__main__":
                 pg1.append(v.weight)   
         optimizer = {
             'adam'  : optim.Adam(pg0, Init_lr_fit, betas = (momentum, 0.999)),
+            'adamw' : optim.AdamW(pg0, Init_lr_fit, betas = (momentum, 0.999)),
             'sgd'   : optim.SGD(pg0, Init_lr_fit, momentum = momentum, nesterov=True)
         }[optimizer_type]
         optimizer.add_param_group({"params": pg1, "weight_decay": weight_decay})
@@ -352,8 +361,8 @@ if __name__ == "__main__":
                 #   判断当前batch_size，自适应调整学习率
                 #-------------------------------------------------------------------#
                 nbs             = 64
-                lr_limit_max    = 1e-3 if optimizer_type == 'adam' else 5e-2
-                lr_limit_min    = 3e-4 if optimizer_type == 'adam' else 5e-4
+                lr_limit_max    = 1e-3 if optimizer_type in ['adam', 'adamw'] else 5e-2
+                lr_limit_min    = 3e-4 if optimizer_type in ['adam', 'adamw'] else 5e-4
                 Init_lr_fit     = min(max(batch_size / nbs * Init_lr, lr_limit_min), lr_limit_max)
                 Min_lr_fit      = min(max(batch_size / nbs * Min_lr, lr_limit_min * 1e-2), lr_limit_max * 1e-2)
 
