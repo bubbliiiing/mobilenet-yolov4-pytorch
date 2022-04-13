@@ -94,16 +94,16 @@ class YOLO(object):
     #---------------------------------------------------#
     #   生成模型
     #---------------------------------------------------#
-    def generate(self):
+    def generate(self, onnx=False):
         self.net    = YoloBody(self.anchors_mask, self.num_classes, self.backbone)
         device      = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.net.load_state_dict(torch.load(self.model_path, map_location=device))
         self.net    = self.net.eval()
         print('{} model, anchors, and classes loaded.'.format(self.model_path))
-
-        if self.cuda:
-            self.net = nn.DataParallel(self.net)
-            self.net = self.net.cuda()
+        if not onnx:
+            if self.cuda:
+                self.net = nn.DataParallel(self.net)
+                self.net = self.net.cuda()
 
     #---------------------------------------------------#
     #   检测图片
