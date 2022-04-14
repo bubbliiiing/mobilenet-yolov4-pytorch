@@ -188,9 +188,9 @@ class YOLOLoss(nn.Module):
         noobj_mask, pred_boxes = self.get_ignore(l, x, y, h, w, targets, scaled_anchors, in_h, in_w, noobj_mask)
 
         if self.cuda:
-            y_true          = y_true.cuda()
-            noobj_mask      = noobj_mask.cuda()
-            box_loss_scale  = box_loss_scale.cuda()
+            y_true          = y_true.type_as(x)
+            noobj_mask      = noobj_mask.type_as(x)
+            box_loss_scale  = box_loss_scale.type_as(x)
         #--------------------------------------------------------------------------#
         #   box_loss_scale是真实框宽高的乘积，宽高均在0-1之间，因此乘积也在0-1之间。
         #   2-宽高的乘积代表真实框越大，比重越小，小框的比重更大。
@@ -203,18 +203,24 @@ class YOLOLoss(nn.Module):
         n           = torch.sum(obj_mask)
         if n != 0:
             #---------------------------------------------------------------#
-            #   计算预测结果和真实结果的ciou
-            #----------------------------------------------------------------#
-            ciou        = self.box_ciou(pred_boxes, y_true[..., :4])
+            #   计算预测结果和真实结果的差距
+            #   loss_loc ciou回归损失
+            #   loss_cls 分类损失
+            #---------------------------------------------------------------#
+            ciou        = self.box_ciou(pred_boxes, y_true[..., :4]).type_as(x)
             # loss_loc    = torch.mean((1 - ciou)[obj_mask] * box_loss_scale[obj_mask])
             loss_loc    = torch.mean((1 - ciou)[obj_mask])
             
             loss_cls    = torch.mean(self.BCELoss(pred_cls[obj_mask], y_true[..., 5:][obj_mask]))
             loss        += loss_loc * self.box_ratio + loss_cls * self.cls_ratio
 
+        #---------------------------------------------------------------#
+        #   计算是否包含物体的置信度损失
+        #---------------------------------------------------------------#
         if self.focal_loss:
-            ratio       = torch.where(obj_mask, torch.ones_like(conf) * self.alpha, torch.ones_like(conf) * (1 - self.alpha)) * torch.where(obj_mask, torch.ones_like(conf) - conf, conf) ** self.gamma
-            loss_conf   = torch.mean((self.BCELoss(conf, obj_mask.type_as(conf)) * ratio)[noobj_mask.bool() | obj_mask]) * self.focal_loss_ratio
+            pos_neg_ratio   = torch.where(obj_mask, torch.ones_like(conf) * self.alpha, torch.ones_like(conf) * (1 - self.alpha)) 
+            hard_easy_ratio = torch.where(obj_mask, torch.ones_like(conf) - conf, conf) ** self.gamma
+            loss_conf   = torch.mean((self.BCELoss(conf, obj_mask.type_as(conf)) * pos_neg_ratio * hard_easy_ratio)[noobj_mask.bool() | obj_mask]) * self.focal_loss_ratio
         else: 
             loss_conf   = torch.mean(self.BCELoss(conf, obj_mask.type_as(conf))[noobj_mask.bool() | obj_mask])
         loss        += loss_conf * self.balance[l] * self.obj_ratio
@@ -356,20 +362,18 @@ class YOLOLoss(nn.Module):
         #-----------------------------------------------------#
         bs = len(targets)
 
-        FloatTensor = torch.cuda.FloatTensor if x.is_cuda else torch.FloatTensor
-        LongTensor  = torch.cuda.LongTensor if x.is_cuda else torch.LongTensor
         #-----------------------------------------------------#
         #   生成网格，先验框中心，网格左上角
         #-----------------------------------------------------#
         grid_x = torch.linspace(0, in_w - 1, in_w).repeat(in_h, 1).repeat(
-            int(bs * len(self.anchors_mask[l])), 1, 1).view(x.shape).type(FloatTensor)
+            int(bs * len(self.anchors_mask[l])), 1, 1).view(x.shape).type_as(x)
         grid_y = torch.linspace(0, in_h - 1, in_h).repeat(in_w, 1).t().repeat(
-            int(bs * len(self.anchors_mask[l])), 1, 1).view(y.shape).type(FloatTensor)
+            int(bs * len(self.anchors_mask[l])), 1, 1).view(y.shape).type_as(x)
 
         # 生成先验框的宽高
         scaled_anchors_l = np.array(scaled_anchors)[self.anchors_mask[l]]
-        anchor_w = FloatTensor(scaled_anchors_l).index_select(1, LongTensor([0]))
-        anchor_h = FloatTensor(scaled_anchors_l).index_select(1, LongTensor([1]))
+        anchor_w = torch.Tensor(scaled_anchors_l).index_select(1, torch.LongTensor([0])).type_as(x)
+        anchor_h = torch.Tensor(scaled_anchors_l).index_select(1, torch.LongTensor([1])).type_as(x)
         
         anchor_w = anchor_w.repeat(bs, 1).repeat(1, 1, in_h * in_w).view(w.shape)
         anchor_h = anchor_h.repeat(bs, 1).repeat(1, 1, in_h * in_w).view(h.shape)
@@ -399,7 +403,7 @@ class YOLOLoss(nn.Module):
                 #-------------------------------------------------------#
                 batch_target[:, [0,2]] = targets[b][:, [0,2]] * in_w
                 batch_target[:, [1,3]] = targets[b][:, [1,3]] * in_h
-                batch_target = batch_target[:, :4]
+                batch_target = batch_target[:, :4].type_as(x)
                 #-------------------------------------------------------#
                 #   计算交并比
                 #   anch_ious       num_true_box, num_anchors
