@@ -425,7 +425,6 @@ if __name__ == "__main__":
         gen_val         = DataLoader(val_dataset  , shuffle = shuffle, batch_size = batch_size, num_workers = num_workers, pin_memory=True, 
                                     drop_last=True, collate_fn=yolo_dataset_collate, sampler=val_sampler)
 
-
         #---------------------------------------#
         #   开始模型训练
         #---------------------------------------#
@@ -470,9 +469,15 @@ if __name__ == "__main__":
 
                 UnFreeze_flag = True
 
+            if distributed:
+                train_sampler.set_epoch(epoch)
+
             gen.dataset.epoch_now       = epoch
             gen_val.dataset.epoch_now   = epoch
 
             set_optimizer_lr(optimizer, lr_scheduler_func, epoch)
 
             fit_one_epoch(model_train, model, yolo_loss, loss_history, optimizer, epoch, epoch_step, epoch_step_val, gen, gen_val, UnFreeze_Epoch, Cuda, fp16, scaler, save_period, save_dir, local_rank)
+            
+        if local_rank == 0:
+            loss_history.writer.close()
