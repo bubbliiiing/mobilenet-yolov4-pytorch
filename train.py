@@ -18,6 +18,7 @@ from utils.callbacks import LossHistory
 from utils.dataloader import YoloDataset, yolo_dataset_collate
 from utils.utils import get_anchors, get_classes
 from utils.utils_fit import fit_one_epoch
+from utils.utils import download_weights
 
 '''
 训练自己的目标检测模型一定需要注意以下几点：
@@ -268,6 +269,14 @@ if __name__ == "__main__":
     else:
         device          = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         local_rank      = 0
+
+    if pretrained:
+        if distributed:
+            if local_rank == 0:
+                download_weights(backbone)  
+            dist.barrier()
+        else:
+            download_weights(backbone)
 
     #----------------------------------------------------#
     #   获取classes和anchor
