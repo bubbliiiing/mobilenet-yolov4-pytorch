@@ -1,23 +1,6 @@
 #-------------------------------------#
 #       对数据集进行训练
 #-------------------------------------#
-import os
-
-import numpy as np
-import torch
-import torch.backends.cudnn as cudnn
-import torch.distributed as dist
-import torch.nn as nn
-import torch.optim as optim
-from torch.utils.data import DataLoader
-
-from nets.yolo import YoloBody
-from nets.yolo_training import (YOLOLoss, get_lr_scheduler, set_optimizer_lr,
-                                weights_init)
-from utils.callbacks import LossHistory
-from utils.dataloader import YoloDataset, yolo_dataset_collate
-from utils.utils import download_weights, get_anchors, get_classes, show_config
-from utils.utils_fit import fit_one_epoch
 import datetime
 import os
 
@@ -33,11 +16,10 @@ from torch.utils.data import DataLoader
 from nets.yolo import YoloBody
 from nets.yolo_training import (YOLOLoss, get_lr_scheduler, set_optimizer_lr,
                                 weights_init)
-from utils.callbacks import LossHistory, EvalCallback
+from utils.callbacks import EvalCallback, LossHistory
 from utils.dataloader import YoloDataset, yolo_dataset_collate
-from utils.utils import get_anchors, get_classes, show_config
+from utils.utils import download_weights, get_anchors, get_classes, show_config
 from utils.utils_fit import fit_one_epoch
-
 
 '''
 训练自己的目标检测模型一定需要注意以下几点：
